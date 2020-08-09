@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentd-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fluentd.labels" . | nindent 4 }}
+data:
+  fluent.conf: |
+    <source>
+      @type tail
+      @id application_logs
+      @label @containers
+      tag app.logs
+      path /opt/app/logs/**/*.log
+      pos_file /opt/app/logs/fluentd-containers.log.pos
+      path_key tailed_path
+      read_from_head true
+      <parse>
+        @type none
+      </parse>
+    </source>
+
+    <label @containers>
+      <filter app.*>
+        @type record_transformer
+        @id filter_application_stream_transformer
+        enable_ruby true
+        <record>
+          stream_name "${record['tailed_path']}"
+        </record>
+      </filter>
+
+      <filter app.*>
+        @type concat
+        key log
+        multiline_start_regexp /^\d{4}[-/]\d{1,2}[-/]\d{1,2}/
+        separator ""
+        flush_interval 5
+        timeout_label @NORMAL
+      </filter>
+
+      <match app.*>
+        @type relabel
+        @label @NORMAL
+      </match>
+    </label>
+    
+    <label @NORMAL>
+      <match app.*>
+        @type cloudwatch_logs
+        @id out_cloudwatch_logs_application
+        region "#{ENV.fetch('REGION')}"
+        log_group_name "/aws/containerinsights/#{ENV.fetch('CLUSTER_NAME')}/application"
+        log_stream_name_key stream_name
+        auto_create_stream true
+        json_handler yajl
+        <buffer>
+          flush_interval 5
+          chunk_limit_size 2m
+          queued_chunks_limit_size 32
+          retry_forever true
+        </buffer>
+      </match>
+    </label>

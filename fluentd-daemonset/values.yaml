@@ -1,0 +1,28 @@
+# Default values for fluentd-daemonset.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: fluent/fluentd-kubernetes-daemonset
+  pullPolicy: IfNotPresent
+  tag: "v1.10.4-debian-cloudwatch-1.0"
+global:
+  cluster:
+    name: "<CLUSTER NAME>"
+    region: "<CLUSTER REGION>"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: fluentd-daemon
+
+service:
+  type: ClusterIP
+  port: 80
+

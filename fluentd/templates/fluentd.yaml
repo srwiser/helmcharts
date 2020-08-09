@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fluentd
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "fluentd.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  serviceName: fluentd-service
+  selector:
+    matchLabels:
+      {{- include "fluentd.selectorLabels" . | nindent 6 }}
+      app: fluentd
+  template:
+    metadata:
+      labels:
+        {{- include "fluentd.selectorLabels" . | nindent 8 }}
+        app: fluentd
+    spec:
+      serviceAccountName: fluentd
+      containers:
+        - env:
+            - name: FLUENTD_CONF
+              value: "fluent.conf"
+            - name: CLUSTER_NAME
+              value: {{ .Values.global.cluster.name }}
+            - name: REGION
+              value: {{ .Values.global.cluster.region }}
+          name: fluentd-container
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.container.port }}
+          resources: {}
+          securityContext:
+            privileged: false
+          volumeMounts:
+            - name: config
+              mountPath: /fluentd/etc
+            - name: fluentd-log-dest
+              mountPath: /fluentd/etc/conf.d
+            - name: app-logs
+              mountPath: /opt/app/logs
+      restartPolicy: Always
+      volumes:
+        - name: config
+          configMap:
+            name: fluentd-config
+        - name: fluentd-log-dest
+          configMap:
+            name: fluentd-log-destination
+        - name: app-logs
+          persistentVolumeClaim:
+            claimName: app-persist-logs
+
+status:
+  replicas: {{ .Values.replicaCount }}
