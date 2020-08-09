@@ -38,8 +38,6 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /fluentd/etc
-            - name: fluentd-log-dest
-              mountPath: /fluentd/etc/conf.d
             - name: app-logs
               mountPath: /opt/app/logs
       restartPolicy: Always
@@ -47,9 +45,6 @@ spec:
         - name: config
           configMap:
             name: fluentd-config
-        - name: fluentd-log-dest
-          configMap:
-            name: fluentd-log-destination
         - name: app-logs
           persistentVolumeClaim:
             claimName: app-persist-logs
